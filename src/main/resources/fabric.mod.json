@@ -1,0 +1,37 @@
+{
+	"schemaVersion": 1,
+	"id": "auto-store-vault",
+	"version": "${version}",
+	"name": "Auto Store Vault",
+	"description": "This is an example description! Tell everyone what your mod is about!",
+	"authors": [
+		"Me!"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/FabricMC/fabric-example-mod"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/auto-store-vault/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"client": [
+			"saki.asv.AutoStoreVaultClient"
+		],
+		"modmenu": [
+			"saki.asv.config.ModMenu"
+		]
+	},
+	"mixins": [
+		"auto-store-vault.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.16.9",
+		"minecraft": "1.21",
+		"java": ">=21",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"modmenu": "*"
+	}
+}
