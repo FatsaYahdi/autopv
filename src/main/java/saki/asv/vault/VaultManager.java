@@ -48,6 +48,10 @@ public class VaultManager {
     private static boolean depositStalled = false; // true if any click this cycle failed to move its item
     private static int currentVaultNumber = -1;    // vault number this deposit cycle is/was targeting
 
+    // --- "every configured vault is full" tracking ---
+    private static int consecutiveFullVaults = 0; // resets to 0 on any successful (non-full) deposit
+    private static boolean allVaultsFull = false; // true once every configured vault has reported full in a row
+
     public static void onClientTick(MinecraftClient client) {
         if (client.player == null || client.world == null) return;
 
@@ -74,6 +78,13 @@ public class VaultManager {
 
         handleMilestone(client, cfg, occupied, effectiveMilestone);
 
+        // Inventory dropped back below threshold (items used, dropped, manually moved, etc.) —
+        // give auto-store another chance next time it fills up instead of staying paused forever.
+        if (occupied < effectiveThreshold && allVaultsFull) {
+            allVaultsFull = false;
+            consecutiveFullVaults = 0;
+        }
+
         if (awaitingVaultScreen) {
             if (client.world.getTime() - commandSentTick > TIMEOUT_TICKS) {
                 awaitingVaultScreen = false; // give up, will retry next tick if still over threshold
@@ -82,6 +93,7 @@ public class VaultManager {
         }
 
         if (occupied >= effectiveThreshold) {
+            if (allVaultsFull) return; // every configured vault reported full; wait for the inventory to change
             triggerAutoStore(client, cfg);
         }
     }
@@ -121,7 +133,7 @@ public class VaultManager {
         int totalSlots = handler.slots.size();
         int vaultSlotCount = totalSlots - PLAYER_INV_SIZE;
         if (vaultSlotCount <= 0) {
-            client.setScreen(null);
+            client.player.closeHandledScreen();
             return;
         }
 
@@ -138,7 +150,7 @@ public class VaultManager {
         if (queue.isEmpty()) {
             cycleIndex++; // nothing to move here, try the next configured vault next time
             sendFeedback(client, cfg, cfg.msgClosingVault, currentVaultNumber, -1);
-            client.setScreen(null);
+            client.player.closeHandledScreen();
             return;
         }
 
@@ -201,9 +213,26 @@ public class VaultManager {
             vaultLooksFull = allOccupied;
         }
 
+        List<Integer> vaults = VaultUtils.parseSlots(cfg.vaultSlots);
+
+        // Track how many configured vaults have reported full back-to-back. A successful
+        // deposit resets the streak; once every configured vault has been tried and found
+        // full in a row, stop auto-triggering instead of endlessly cycling through all of them.
+        if (vaultLooksFull) {
+            consecutiveFullVaults++;
+        } else {
+            consecutiveFullVaults = 0;
+        }
+
+        boolean justStoppedAll = vaultLooksFull && !vaults.isEmpty() && !allVaultsFull
+                && consecutiveFullVaults >= vaults.size();
+        if (justStoppedAll) allVaultsFull = true;
+
         if (closeScreen) {
-            List<Integer> vaults = VaultUtils.parseSlots(cfg.vaultSlots);
-            if (vaultLooksFull && !vaults.isEmpty()) {
+            if (justStoppedAll) {
+                client.player.sendMessage(Text.literal(
+                        "§c[AutoPV] All configured vaults are full. Auto-store paused until your inventory frees up."), false);
+            } else if (vaultLooksFull && !vaults.isEmpty()) {
                 int nextVaultNumber = vaults.get((cycleIndex + 1) % vaults.size());
                 sendFeedback(client, cfg, cfg.msgVaultFull, currentVaultNumber, nextVaultNumber);
             } else if (!vaultLooksFull) {
@@ -214,7 +243,12 @@ public class VaultManager {
         // If the vault couldn't take everything, move to the next configured vault next time.
         if (vaultLooksFull) cycleIndex++;
 
-        if (closeScreen) client.setScreen(null);
+        // Close via the player entity (not client.setScreen(null) directly) so the
+        // CloseHandledScreenC2SPacket actually reaches the server. Skipping that packet
+        // left the server thinking the vault container was still open, which blocked
+        // opening the next vault and required manually opening another container
+        // (e.g. a chest/ender chest) to force a resync.
+        if (closeScreen) client.player.closeHandledScreen();
 
         depositing = false;
         depositHandler = null;
