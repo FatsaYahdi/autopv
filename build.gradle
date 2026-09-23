@@ -3,6 +3,10 @@ plugins {
 	id 'maven-publish'
 }
 
+base {
+	archivesName = "${project.name}_${project.version}+${project.minecraft_version}"
+}
+
 repositories {
     mavenCentral()
     maven { url = "https://maven.terraformersmc.com/releases" }
@@ -26,9 +30,11 @@ dependencies {
 processResources {
 	def version = project.version
 	inputs.property "version", version
+	def minecraft_version = project.minecraft_version
+	inputs.property "minecraft_version", minecraft_version
 
 	filesMatching("fabric.mod.json") {
-		expand "version": version
+		expand "version": version, "minecraft_version": minecraft_version
 	}
 }
 

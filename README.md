@@ -1,6 +1,6 @@
 # AutoPV
 
-Fabric 1.21 client mod. Auto-stores items into a server vault (`/pv <n>`) once your
+Fabric 1.21.11 client mod. Auto-stores items into a server vault (`/pv <n>`) once your
 inventory fills past a threshold. Config screen matches your reference image via
 YACL (YetAnotherConfigLib) + ModMenu integration. `/asv` command included.
 
@@ -13,7 +13,7 @@ YACL (YetAnotherConfigLib) + ModMenu integration. `/asv` command included.
    ```
    (or open the project in IntelliJ with the Fabric/Loom plugin — it'll fetch one for you)
 3. `./gradlew build` → output jar in `build/libs/`.
-4. Check `gradle.properties` versions against https://fabricmc.net/develop/ — 1.21
+4. Check `gradle.properties` versions against https://fabricmc.net/develop/ — 1.21.x
    yarn/loader/API build numbers do get bumped; update if the build fails on a
    missing artifact.
 5. Drop the jar, plus Fabric API + ModMenu + YACL jars, into your `mods/` folder.
@@ -115,14 +115,18 @@ are ignored.
 
 - **`Could not find dev.isxander:yet-another-config-lib-fabric:...`** — fixed:
   YACL's artifact id is `yet-another-config-lib` (no `-fabric`); the `-fabric`
-  is only part of the version string, e.g. `3.6.1+1.21-fabric`. Already
+  is only part of the version string, e.g. `3.8.1+1.21.11-fabric`. Already
   corrected in `build.gradle`.
 - **`ACQUIRED_PREVIOUS_OWNER_DISOWNED` loom cache lock** — harmless, means a
   prior build got killed mid-way. Gradle rebuilds the cache automatically; if
   it hangs, delete the project's `.gradle/loom-cache` folder and rebuild.
-- Version numbers for MC 1.21/1.21.1 fabric per isXander's own chart:
-  `yacl_version=3.6.1+1.21-fabric`. Recheck https://docs.isxander.dev/yet-another-config-lib/installing-yacl
-  if targeting a different 1.21.x point release.
+- Version numbers per isXander's own chart: `yacl_version=3.8.1+1.21.11-fabric`.
+  Deliberately pinned to 3.8.1, not the newer 3.8.2 — 3.8.2 ships a broken
+  access widener that crashes some launchers on startup
+  (isXander/YetAnotherConfigLib#313). Recheck
+  https://docs.isxander.dev/yet-another-config-lib/installing-yacl if
+  targeting a different 1.21.x point release, and check whether that bug is
+  fixed before upgrading past 3.8.1.
 
 ## Known assumption to double check
 
